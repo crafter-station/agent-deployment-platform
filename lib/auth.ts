@@ -36,6 +36,41 @@ export function isAllowedOwner(userId: string): boolean {
   return owners.includes(userId);
 }
 
+export function ownerContext(userId: string): Context {
+  if (!isAllowedOwner(userId))
+    throw new DomainError(
+      "forbidden",
+      "This account does not have pilot access.",
+      403,
+    );
+  let aliases: unknown;
+  try {
+    aliases = JSON.parse(process.env.STUDIO_WORKSPACE_ALIASES || "{}");
+  } catch {
+    throw new DomainError(
+      "workspace_configuration",
+      "Workspace access is not configured correctly.",
+      503,
+    );
+  }
+  if (!aliases || typeof aliases !== "object" || Array.isArray(aliases))
+    throw new DomainError(
+      "workspace_configuration",
+      "Workspace access is not configured correctly.",
+      503,
+    );
+  const mapped = Object.hasOwn(aliases, userId)
+    ? (aliases as Record<string, unknown>)[userId]
+    : `user:${userId}`;
+  if (typeof mapped !== "string" || !/^user:user_[A-Za-z0-9]+$/.test(mapped))
+    throw new DomainError(
+      "workspace_configuration",
+      "Workspace access is not configured correctly.",
+      503,
+    );
+  return { workspaceId: mapped, actorId: userId };
+}
+
 export async function requireActor(request?: Request): Promise<Context> {
   if (isLocalOwnerRequest(request))
     return { workspaceId: "local-owner", actorId: "local-owner" };
@@ -46,11 +81,5 @@ export async function requireActor(request?: Request): Promise<Context> {
       "Sign in to access your workspace.",
       401,
     );
-  if (!isAllowedOwner(userId))
-    throw new DomainError(
-      "forbidden",
-      "This workspace is limited to the pilot owners.",
-      403,
-    );
-  return { workspaceId: `user:${userId}`, actorId: userId };
+  return ownerContext(userId);
 }

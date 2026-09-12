@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { isAllowedOwner, isLocalOwnerRequest } from "../lib/auth";
+import { isAllowedOwner, isLocalOwnerRequest, ownerContext } from "../lib/auth";
 
 const original = { ...process.env };
 
@@ -8,6 +8,7 @@ beforeEach(() => {
   process.env.LOCAL_OWNER_MODE = "true";
   delete process.env.VERCEL;
   delete process.env.CLERK_ALLOWED_USER_IDS;
+  delete process.env.STUDIO_WORKSPACE_ALIASES;
 });
 
 afterEach(() => {
@@ -16,6 +17,7 @@ afterEach(() => {
     "LOCAL_OWNER_MODE",
     "VERCEL",
     "CLERK_ALLOWED_USER_IDS",
+    "STUDIO_WORKSPACE_ALIASES",
   ]) {
     if (original[key] === undefined) delete process.env[key];
     else process.env[key] = original[key];
@@ -29,6 +31,28 @@ function local(headers: Record<string, string> = {}) {
 }
 
 describe("owner authentication boundaries", () => {
+  test("verified owner identities share the existing workspace without merging actors", () => {
+    process.env.CLERK_ALLOWED_USER_IDS = "user_primary,user_crafter";
+    process.env.STUDIO_WORKSPACE_ALIASES = JSON.stringify({
+      user_crafter: "user:user_primary",
+      user_stranger: "user:user_primary",
+    });
+    expect(ownerContext("user_primary")).toEqual({
+      workspaceId: "user:user_primary",
+      actorId: "user_primary",
+    });
+    expect(ownerContext("user_crafter")).toEqual({
+      workspaceId: "user:user_primary",
+      actorId: "user_crafter",
+    });
+    expect(() => ownerContext("user_stranger")).toThrow(
+      "does not have pilot access",
+    );
+    process.env.STUDIO_WORKSPACE_ALIASES = JSON.stringify({ user_crafter: "" });
+    expect(() => ownerContext("user_crafter")).toThrow(
+      "not configured correctly",
+    );
+  });
   test("local owner is explicitly development-only", () => {
     expect(isLocalOwnerRequest(local())).toBe(true);
     Object.assign(process.env, { NODE_ENV: "production" });

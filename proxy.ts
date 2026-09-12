@@ -9,6 +9,7 @@ import { isAllowedOwner, isLocalOwnerRequest } from "./lib/auth";
 const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
+  "/access",
   "/a/:id",
   "/api/public/(.*)",
   "/api/webhooks/(.*)",
@@ -37,6 +38,8 @@ const authenticate = clerkMiddleware(async (session, request) => {
     return NextResponse.redirect(signIn);
   }
   if (!isAllowedOwner(userId)) {
+    if (!request.nextUrl.pathname.startsWith("/api/"))
+      return NextResponse.redirect(new URL("/access", request.url));
     return NextResponse.json(
       {
         error: {
