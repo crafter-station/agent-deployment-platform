@@ -1,0 +1,6 @@
+{
+  "buildCommand": "bun run build",
+  "installCommand": "bun install --frozen-lockfile",
+  "framework": "nextjs",
+  "crons": [{ "path": "/api/cron/drain", "schedule": "* * * * *" }]
+}

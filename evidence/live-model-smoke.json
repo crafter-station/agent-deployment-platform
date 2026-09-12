@@ -1,0 +1,34 @@
+{
+  "creation": {
+    "text": "¡Listo! 🎉 **Quequito** ya está desplegado y activo en su página web (rol de respuesta web).\n\n- **Estado:** live, revisión 1\n- **Comportamiento probado:** cuando le falta un dato (como fecha de reunión), lo pide en vez de inventarlo ✔️\n- **Accesos:** solo respuesta web por ahora; GitHub y WhatsApp siguen deshabilitados\n\nSi quieres que además use WhatsApp, lea/escriba en GitHub, o ajustar su tono/instrucciones, dime y lo actualizo.",
+    "actions": [
+      {
+        "type": "agents.create",
+        "agentId": "80c8fce7-2826-43e1-a51a-b9167be5526b",
+        "revision": 1
+      },
+      {
+        "type": "previews.run",
+        "agentId": "80c8fce7-2826-43e1-a51a-b9167be5526b",
+        "revision": 1,
+        "runId": "a4f44bc3-eeae-4823-b084-e170a05e1a97",
+        "previewId": "07379e0d-f912-4710-a3fb-c704a053f4c0",
+        "status": "succeeded"
+      },
+      {
+        "type": "deployments.create",
+        "agentId": "80c8fce7-2826-43e1-a51a-b9167be5526b",
+        "revision": 1,
+        "deploymentId": "1fc3f5a1-372d-48ec-aa38-3a09cd5d1302"
+      }
+    ]
+  },
+  "agentId": "80c8fce7-2826-43e1-a51a-b9167be5526b",
+  "revision": 1,
+  "preview": {
+    "text": "¡Buena onda que lo aclares! Justo por eso no puedo decirte una fecha 😅 No tengo registrada la próxima reunión todavía.\n\n¿Me compartes estos datos para dejarlo claro?\n- 📅 Fecha\n- 🕒 Hora\n- 📍 Lugar o modalidad (presencial/virtual)\n\nEn cuanto me los pases, te ayudo a dejarlo bien resumido para el grupo.",
+    "status": "succeeded",
+    "mode": "model",
+    "tokens": 1877
+  }
+}

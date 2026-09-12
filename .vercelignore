@@ -1,0 +1,7 @@
+.git
+.env*
+.clerk
+.studio-data
+evidence
+scripts
+tests

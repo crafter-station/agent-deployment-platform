@@ -1,0 +1,52 @@
+{
+  "verifiedAt": "2026-09-12T20:12:28.319662+00:00",
+  "clerk": "isolated owned development instance",
+  "authentication": "real Clerk ticket session in agent-browser; no inbox message sent",
+  "signedInWorkspaceRead": 200,
+  "tests": {
+    "passed": 3,
+    "assertions": 19
+  },
+  "checks": [
+    {
+      "path": "/api/health",
+      "forwardedSpoof": false,
+      "status": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/workspace",
+      "forwardedSpoof": false,
+      "status": 401,
+      "expected": 401,
+      "passed": true
+    },
+    {
+      "path": "/api/commands",
+      "forwardedSpoof": false,
+      "status": 401,
+      "expected": 401,
+      "passed": true
+    },
+    {
+      "path": "/api/workspace",
+      "forwardedSpoof": true,
+      "status": 401,
+      "expected": 401,
+      "passed": true
+    },
+    {
+      "path": "/api/cron/drain",
+      "forwardedSpoof": false,
+      "status": 401,
+      "expected": 401,
+      "passed": true
+    }
+  ],
+  "selfRewrite": "Clerk same-URL middleware rewrite normalized to Next middleware continuation; auth override headers retained",
+  "limitations": [
+    "Production Clerk instance requires custom production domain configuration.",
+    "Local owner mode is rejected when forwarding headers are present; browser proof used Clerk authentication."
+  ]
+}

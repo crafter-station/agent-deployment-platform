@@ -1,0 +1,100 @@
+{
+  "studio-desktop": {
+    "counts": {
+      "inapplicable": 47,
+      "incomplete": 0,
+      "passes": 42,
+      "violations": 0
+    },
+    "violations": [],
+    "incomplete": []
+  },
+  "connections": {
+    "counts": {
+      "inapplicable": 56,
+      "incomplete": 1,
+      "passes": 33,
+      "violations": 0
+    },
+    "violations": [],
+    "incomplete": [
+      {
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=axeAPI",
+        "id": "color-contrast",
+        "impact": "serious",
+        "nodeCount": 1,
+        "nodes": [
+          {
+            "failureSummary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content",
+            "html": "<span class=\"nav-count\">1</span>",
+            "target": [
+              ".nav-count"
+            ]
+          }
+        ],
+        "tags": [
+          "cat.color",
+          "wcag2aa",
+          "wcag143",
+          "TTv5",
+          "TT13.c",
+          "EN-301-549",
+          "EN-9.1.4.3",
+          "ACT",
+          "RGAAv4",
+          "RGAA-3.2.1"
+        ]
+      }
+    ]
+  },
+  "activity": {
+    "counts": {
+      "inapplicable": 58,
+      "incomplete": 1,
+      "passes": 31,
+      "violations": 0
+    },
+    "violations": [],
+    "incomplete": [
+      {
+        "help": "Elements must meet minimum color contrast ratio thresholds",
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=axeAPI",
+        "id": "color-contrast",
+        "impact": "serious",
+        "nodeCount": 1,
+        "nodes": [
+          {
+            "failureSummary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content",
+            "html": "<span class=\"nav-count\">0</span>",
+            "target": [
+              ".nav-count"
+            ]
+          }
+        ],
+        "tags": [
+          "cat.color",
+          "wcag2aa",
+          "wcag143",
+          "TTv5",
+          "TT13.c",
+          "EN-301-549",
+          "EN-9.1.4.3",
+          "ACT",
+          "RGAAv4",
+          "RGAA-3.2.1"
+        ]
+      }
+    ]
+  },
+  "studio-mobile": {
+    "counts": {
+      "inapplicable": 47,
+      "incomplete": 0,
+      "passes": 42,
+      "violations": 0
+    },
+    "violations": [],
+    "incomplete": []
+  }
+}

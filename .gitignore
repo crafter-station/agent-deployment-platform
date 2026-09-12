@@ -1,0 +1,14 @@
+node_modules
+.next
+.env*
+!.env.example
+.vercel
+.data
+.studio-data
+evidence/private
+*.tsbuildinfo
+scripts/kai*
+scripts/kapso-cutover.ts
+scripts/auth-test.ts
+scripts/live-smoke.ts
+.clerk
