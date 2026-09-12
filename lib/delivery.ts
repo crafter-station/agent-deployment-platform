@@ -19,6 +19,7 @@ type DeliveryRow = {
 };
 export type DeliveryDependencies = {
   sql?: ReturnType<typeof postgres>;
+  schema?: string;
   run?: typeof runAgent;
   find?: typeof findPublicAgent;
   workspace?: typeof getWorkspace;
@@ -34,7 +35,20 @@ const initializations = new WeakMap<
   ReturnType<typeof postgres>,
   Promise<unknown>
 >();
-async function database(provided?: ReturnType<typeof postgres>) {
+async function database(
+  provided?: ReturnType<typeof postgres>,
+  schema?: string,
+) {
+  if (provided && (!schema || !/^delivery_test_[a-f0-9]{32}$/.test(schema)))
+    throw new DomainError(
+      "TEST_SCHEMA_REQUIRED",
+      "Injected delivery SQL requires an explicit isolated test schema.",
+    );
+  if (!provided && schema)
+    throw new DomainError(
+      "TEST_CONNECTION_REQUIRED",
+      "A schema override requires an isolated SQL connection.",
+    );
   if (!provided && !process.env.DATABASE_URL)
     throw new DomainError(
       "DATABASE_REQUIRED",
@@ -48,16 +62,17 @@ async function database(provided?: ReturnType<typeof postgres>) {
       idle_timeout: 20,
     });
   const sql = provided ?? (db as ReturnType<typeof postgres>);
+  const table = sql(`${schema ?? "public"}.studio_deliveries`);
   let ready = initializations.get(sql);
   if (!ready) {
     ready =
-      sql`CREATE TABLE IF NOT EXISTS studio_deliveries (id text PRIMARY KEY, kind text NOT NULL, payload jsonb NOT NULL, status text NOT NULL DEFAULT 'queued', attempts integer NOT NULL DEFAULT 0, result jsonb, updated_at timestamptz NOT NULL DEFAULT now(), created_at timestamptz NOT NULL DEFAULT now())`.then(
+      sql`CREATE TABLE IF NOT EXISTS ${table} (id text PRIMARY KEY, kind text NOT NULL, payload jsonb NOT NULL, status text NOT NULL DEFAULT 'queued', attempts integer NOT NULL DEFAULT 0, result jsonb, updated_at timestamptz NOT NULL DEFAULT now(), created_at timestamptz NOT NULL DEFAULT now())`.then(
         () => undefined,
       );
     initializations.set(sql, ready);
   }
   await ready;
-  return sql;
+  return { sql, table };
 }
 
 export async function enqueue(
@@ -65,12 +80,13 @@ export async function enqueue(
   kind: "whatsapp",
   payload: Record<string, unknown>,
   provided?: ReturnType<typeof postgres>,
+  schema?: string,
 ) {
   if (kind !== "whatsapp")
     throw new DomainError("CHANNEL_UNSUPPORTED", "Canal no implementado.");
-  const sql = await database(provided);
+  const { sql, table } = await database(provided, schema);
   const result =
-    await sql`INSERT INTO studio_deliveries (id,kind,payload) VALUES (${id},${kind},${sql.json(payload as postgres.JSONValue)}) ON CONFLICT (id) DO NOTHING RETURNING id`;
+    await sql`INSERT INTO ${table} (id,kind,payload) VALUES (${id},${kind},${sql.json(payload as postgres.JSONValue)}) ON CONFLICT (id) DO NOTHING RETURNING id`;
   return result.length > 0;
 }
 
@@ -103,14 +119,14 @@ async function markInterrupted(
 }
 
 export async function drainDeliveries(dependencies: DeliveryDependencies = {}) {
-  const sql = await database(dependencies.sql);
-  await sql`UPDATE studio_deliveries SET status='uncertain',updated_at=now() WHERE status='sending' AND updated_at < now() - interval '5 minutes'`;
+  const { sql, table } = await database(dependencies.sql, dependencies.schema);
+  await sql`UPDATE ${table} SET status='uncertain',updated_at=now() WHERE status='sending' AND updated_at < now() - interval '5 minutes'`;
   const interrupted =
-    await sql`UPDATE studio_deliveries SET status=CASE WHEN attempts < 3 THEN 'queued' ELSE 'failed' END,updated_at=now() WHERE status='running' AND updated_at < now() - interval '5 minutes' RETURNING *`;
+    await sql`UPDATE ${table} SET status=CASE WHEN attempts < 3 THEN 'queued' ELSE 'failed' END,updated_at=now() WHERE status='running' AND updated_at < now() - interval '5 minutes' RETURNING *`;
   for (const row of interrupted)
     await markInterrupted(row as DeliveryRow, dependencies);
   const rows =
-    await sql`UPDATE studio_deliveries SET status='running',attempts=attempts+1,updated_at=now() WHERE id IN (SELECT id FROM studio_deliveries WHERE status='queued' ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING *`;
+    await sql`UPDATE ${table} SET status='running',attempts=attempts+1,updated_at=now() WHERE id IN (SELECT id FROM ${table} WHERE status='queued' ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING *`;
   const outcomes: { id: string; status: string }[] = [];
   for (const row of rows) {
     let dispatchStarted = false;
@@ -162,7 +178,7 @@ export async function drainDeliveries(dependencies: DeliveryDependencies = {}) {
           503,
         );
       const dispatch =
-        await sql`UPDATE studio_deliveries SET status='sending',updated_at=now() WHERE id=${row.id} AND status='running' AND attempts=${row.attempts} RETURNING id`;
+        await sql`UPDATE ${table} SET status='sending',updated_at=now() WHERE id=${row.id} AND status='running' AND attempts=${row.attempts} RETURNING id`;
       if (!dispatch.length)
         throw new DomainError(
           "LEASE_LOST",
@@ -189,7 +205,7 @@ export async function drainDeliveries(dependencies: DeliveryDependencies = {}) {
       );
       if (!response.ok) {
         const status = response.status >= 500 ? "uncertain" : "failed";
-        await sql`UPDATE studio_deliveries SET status=${status},result=${sql.json({ httpStatus: response.status })},updated_at=now() WHERE id=${row.id} AND attempts=${row.attempts}`;
+        await sql`UPDATE ${table} SET status=${status},result=${sql.json({ httpStatus: response.status })},updated_at=now() WHERE id=${row.id} AND attempts=${row.attempts}`;
         outcomes.push({ id: row.id, status });
         continue;
       }
@@ -201,19 +217,19 @@ export async function drainDeliveries(dependencies: DeliveryDependencies = {}) {
           "El proveedor no devolvió un identificador de aceptación.",
           502,
         );
-      await sql`UPDATE studio_deliveries SET status='succeeded',result=${sql.json({ messageId, providerStatus: "accepted" })},updated_at=now() WHERE id=${row.id} AND attempts=${row.attempts}`;
+      await sql`UPDATE ${table} SET status='succeeded',result=${sql.json({ messageId, providerStatus: "accepted" })},updated_at=now() WHERE id=${row.id} AND attempts=${row.attempts}`;
       outcomes.push({ id: row.id, status: "succeeded" });
     } catch (error) {
       const status = dispatchStarted ? "uncertain" : "failed";
       const saved =
-        await sql`UPDATE studio_deliveries SET status=${status},result=${sql.json({ code: error instanceof DomainError ? error.code : "PROCESSING_FAILED" })},updated_at=now() WHERE id=${row.id} AND attempts=${row.attempts} AND status IN ('running','sending') RETURNING id`;
+        await sql`UPDATE ${table} SET status=${status},result=${sql.json({ code: error instanceof DomainError ? error.code : "PROCESSING_FAILED" })},updated_at=now() WHERE id=${row.id} AND attempts=${row.attempts} AND status IN ('running','sending') RETURNING id`;
       outcomes.push({
         id: row.id,
         status: saved.length ? status : "lease_lost",
       });
     }
   }
-  await sql`UPDATE studio_deliveries SET payload='{}'::jsonb WHERE created_at < now() - interval '7 days' AND status IN ('succeeded','failed') AND payload <> '{}'::jsonb`;
+  await sql`UPDATE ${table} SET payload='{}'::jsonb WHERE created_at < now() - interval '7 days' AND status IN ('succeeded','failed') AND payload <> '{}'::jsonb`;
   return outcomes;
 }
 

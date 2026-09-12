@@ -1,0 +1,14 @@
+{
+  "studio": {
+    "inapplicable": 34,
+    "incomplete": 0,
+    "passes": 26,
+    "violations": 0
+  },
+  "publicMobile": {
+    "inapplicable": 39,
+    "incomplete": 1,
+    "passes": 21,
+    "violations": 0
+  }
+}
